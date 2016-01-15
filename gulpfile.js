@@ -6,7 +6,9 @@ var babelify = require('babelify');
 var watchify = require('watchify');
 var notify = require('gulp-notify');
 
-var stylus = require('gulp-stylus');
+var sass = require('gulp-sass');
+var sourcemaps = require('gulp-sourcemaps');
+var cssmin = require('gulp-cssmin');
 var autoprefixer = require('gulp-autoprefixer');
 var uglify = require('gulp-uglify');
 var rename = require('gulp-rename');
@@ -21,26 +23,17 @@ var historyApiFallback = require('connect-history-api-fallback')
   Styles Task
 */
 
-gulp.task('styles',function() {
-  // move over fonts
-
-  gulp.src('css/fonts/**.*')
-    .pipe(gulp.dest('build/css/fonts'))
-
-  // Compiles CSS
-  gulp.src('css/style.styl')
-    .pipe(stylus())
-    .pipe(autoprefixer())
-    .pipe(gulp.dest('./build/css/'))
+gulp.task('styles', function() {
+  return gulp.src('scss/global.scss')
+    .pipe(sourcemaps.init())
+    .pipe(sass())
+    .pipe(autoprefixer('last 2 versions'))
+    .pipe(sourcemaps.write())
+    .pipe(gulp.dest('css/'))
+    .pipe(cssmin())
+    .pipe(rename({suffix: '.min'}))
+    .pipe(gulp.dest('css/'))
     .pipe(reload({stream:true}))
-});
-
-/*
-  Images
-*/
-gulp.task('images',function(){
-  gulp.src('css/images/**')
-    .pipe(gulp.dest('./build/css/images'))
 });
 
 /*
@@ -53,6 +46,10 @@ gulp.task('browser-sync', function() {
         middleware : [ historyApiFallback() ],
         ghostMode: false
     });
+});
+
+gulp.task('bs-reload', function () {
+    browserSync.reload();
 });
 
 function handleErrors() {
@@ -81,7 +78,7 @@ function buildScript(file, watch) {
     return stream
       .on('error', handleErrors)
       .pipe(source(file))
-      .pipe(gulp.dest('./build/'))
+      .pipe(gulp.dest('./js/build/'))
       // If you also want to uglify it
       // .pipe(buffer())
       // .pipe(uglify())
@@ -105,7 +102,8 @@ gulp.task('scripts', function() {
 });
 
 // run 'scripts' task first, then watch for future changes
-gulp.task('default', ['images','styles','scripts','browser-sync'], function() {
-  gulp.watch('css/**/*', ['styles']); // gulp watch for stylus changes
+gulp.task('default', ['styles','scripts','browser-sync'], function() {
+  gulp.watch('scss/*.scss', ['styles']);
+  gulp.watch(['*.html'], ['bs-reload']);
   return buildScript('main.js', true); // browserify watch for JS changes
 });
